@@ -122,6 +122,37 @@ describe('TogetherProvider', () => {
     await expect(provider.route(request)).rejects.toThrow('Together rate limit exceeded');
   });
 
+  it('should throw error on malformed response missing usage data', async () => {
+    const mockResponse = {
+      choices: [{ message: { content: 'Response' } }],
+    };
+
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockResponse),
+    } as Response);
+
+    await expect(
+      provider.route({ prompt: 'Test', taskType: 'code' })
+    ).rejects.toThrow('Together API error: malformed response (missing usage data)');
+  });
+
+  it('should throw error on malformed response with invalid usage types', async () => {
+    const mockResponse = {
+      choices: [{ message: { content: 'Response' } }],
+      usage: { prompt_tokens: 'not-a-number', completion_tokens: 5 },
+    };
+
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockResponse),
+    } as Response);
+
+    await expect(
+      provider.route({ prompt: 'Test', taskType: 'code' })
+    ).rejects.toThrow('Together API error: malformed response (missing usage data)');
+  });
+
   it('should reset rate limit window after 60 seconds', async () => {
     // Set rate limit counter at max and window start 61 seconds ago
     (provider as any).requestCount = 20;

@@ -117,7 +117,8 @@ describe('HuggingFaceProvider', () => {
 
     await provider.route({ prompt: 'Test', taskType: 'code' });
 
-    expect(provider.quota.remaining).toBeLessThan(500);
+    // 'Response' = 8 chars, estimateTokens = Math.ceil(8/4) = 2
+    expect(provider.quota.remaining).toBe(500 - 2);
     expect(provider.quota.available).toBe(true);
   });
 
@@ -134,7 +135,9 @@ describe('HuggingFaceProvider', () => {
 
     await provider.route({ prompt: 'Test', taskType: 'code' });
 
-    expect(provider.quota.remaining).toBeLessThanOrEqual(0);
+    // 'Some response text here' = 23 chars, estimateTokens = Math.ceil(23/4) = 6
+    // 1 - 6 = -5
+    expect(provider.quota.remaining).toBe(-5);
     expect(provider.quota.available).toBe(false);
   });
 
@@ -202,5 +205,38 @@ describe('HuggingFaceProvider', () => {
 
     const healthy = await provider.healthCheck();
     expect(healthy).toBe(false);
+  });
+
+  it('should throw error on empty array response', async () => {
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve([]),
+    } as Response);
+
+    await expect(
+      provider.route({ prompt: 'Test', taskType: 'code' })
+    ).rejects.toThrow('HuggingFace API error: malformed response');
+  });
+
+  it('should throw error on array response with missing generated_text', async () => {
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve([{}]),
+    } as Response);
+
+    await expect(
+      provider.route({ prompt: 'Test', taskType: 'code' })
+    ).rejects.toThrow('HuggingFace API error: malformed response');
+  });
+
+  it('should throw error on object response with missing generated_text', async () => {
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ other_field: 'value' }),
+    } as Response);
+
+    await expect(
+      provider.route({ prompt: 'Test', taskType: 'code' })
+    ).rejects.toThrow('HuggingFace API error: malformed response');
   });
 });

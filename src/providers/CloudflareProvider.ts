@@ -5,12 +5,13 @@ export class CloudflareProvider extends ConcreteProvider {
   private static readonly BASE_URL = 'https://api.cloudflare.com/client/v4';
   private static readonly DAILY_LIMIT = 10000;
 
-  constructor(apiKey: string) {
+  constructor(apiKey: string, accountId: string) {
     super({
       name: 'cloudflare',
       category: 'image',
       apiKey,
     });
+    this.accountId = accountId;
     this.quota = {
       remaining: CloudflareProvider.DAILY_LIMIT,
       total: CloudflareProvider.DAILY_LIMIT,
@@ -20,6 +21,8 @@ export class CloudflareProvider extends ConcreteProvider {
     };
   }
 
+  private accountId: string;
+
   async route(request: ProviderRequest): Promise<ProviderResponse> {
     if (!this.quota.available) {
       throw new Error('Cloudflare quota exhausted');
@@ -27,7 +30,7 @@ export class CloudflareProvider extends ConcreteProvider {
 
     const startTime = Date.now();
     const response = await fetch(
-      `${CloudflareProvider.BASE_URL}/accounts/ai/run/@cf/stabilityai/stable-diffusion-xl-base-1.0`,
+      `${CloudflareProvider.BASE_URL}/accounts/${this.accountId}/ai/run/@cf/stabilityai/stable-diffusion-xl-base-1.0`,
       {
         method: 'POST',
         headers: {
@@ -67,7 +70,7 @@ export class CloudflareProvider extends ConcreteProvider {
   async healthCheck(): Promise<boolean> {
     try {
       const response = await fetch(
-        `${CloudflareProvider.BASE_URL}/accounts/ai/models/search`,
+        `${CloudflareProvider.BASE_URL}/accounts/${this.accountId}/ai/models/search`,
         { headers: { 'Authorization': `Bearer ${this.apiKey}` } }
       );
       return response.ok;

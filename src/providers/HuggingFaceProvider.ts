@@ -43,7 +43,13 @@ export class HuggingFaceProvider extends ConcreteProvider {
     }
 
     const data = await response.json();
-    const content = Array.isArray(data) ? data[0].generated_text : data.generated_text;
+    const text = Array.isArray(data)
+      ? (data[0]?.generated_text ?? '')
+      : (data?.generated_text ?? '');
+    if (!text) {
+      throw new Error('HuggingFace API error: malformed response');
+    }
+    const content = text;
     const tokensUsed = this.estimateTokens(content);
 
     this.quota.remaining -= tokensUsed;

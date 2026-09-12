@@ -4,10 +4,11 @@ import { ProviderRequest } from '../../src/types';
 
 describe('CloudflareProvider', () => {
   const DAILY_LIMIT = 10000;
+  const TEST_ACCOUNT_ID = 'test-account-id-123';
   let provider: CloudflareProvider;
 
   beforeEach(() => {
-    provider = new CloudflareProvider('test-api-key');
+    provider = new CloudflareProvider('test-api-key', TEST_ACCOUNT_ID);
     vi.stubGlobal('fetch', vi.fn());
     // URL.createObjectURL is a web API not available in Node.js; stub it for image provider tests
     (URL as any).createObjectURL = vi.fn(() => 'blob:test-image-url');
@@ -152,7 +153,7 @@ describe('CloudflareProvider', () => {
       .rejects.toThrow('Cloudflare API error: 403');
   });
 
-  it('should send correct API request format with Authorization header', async () => {
+  it('should send correct API request format with Authorization header and account ID in URL', async () => {
     const mockBlob = new Blob(['image-data'], { type: 'image/png' });
     vi.mocked(global.fetch).mockResolvedValue({
       ok: true,
@@ -162,7 +163,7 @@ describe('CloudflareProvider', () => {
     await provider.route({ prompt: 'Test', taskType: 'image' });
 
     expect(global.fetch).toHaveBeenCalledWith(
-      'https://api.cloudflare.com/client/v4/accounts/ai/run/@cf/stabilityai/stable-diffusion-xl-base-1.0',
+      `https://api.cloudflare.com/client/v4/accounts/${TEST_ACCOUNT_ID}/ai/run/@cf/stabilityai/stable-diffusion-xl-base-1.0`,
       expect.objectContaining({
         method: 'POST',
         headers: {
@@ -173,13 +174,22 @@ describe('CloudflareProvider', () => {
     );
   });
 
-  it('should perform health check successfully', async () => {
+  it('should perform health check successfully with account ID in URL', async () => {
     vi.mocked(global.fetch).mockResolvedValue({
       ok: true,
     } as Response);
 
     const healthy = await provider.healthCheck();
     expect(healthy).toBe(true);
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      `https://api.cloudflare.com/client/v4/accounts/${TEST_ACCOUNT_ID}/ai/models/search`,
+      expect.objectContaining({
+        headers: {
+          'Authorization': 'Bearer test-api-key',
+        },
+      })
+    );
   });
 
   it('should handle health check failure', async () => {

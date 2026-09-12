@@ -59,6 +59,15 @@ export class TogetherProvider extends ConcreteProvider {
     }
 
     const data = await response.json();
+
+    if (
+      !data.usage ||
+      typeof data.usage.prompt_tokens !== 'number' ||
+      typeof data.usage.completion_tokens !== 'number'
+    ) {
+      throw new Error('Together API error: malformed response (missing usage data)');
+    }
+
     const tokensUsed = TokenCounter.fromUsage(data.usage);
 
     this.quota.remaining -= tokensUsed;
