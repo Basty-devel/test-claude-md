@@ -78,7 +78,7 @@ interface ProviderResponse {
 Providers are registered via a configuration file or CLI command:
 
 ```bash
-/omnifree provider add custom-provider \
+/use provider add custom-provider \
   --endpoint https://api.example.com/v1 \
   --api-key $API_KEY \
   --category chat \
@@ -153,7 +153,7 @@ Where `weight(priority)` = 1.0 for default, adjustable via config.
 ### 4.1 Default Configuration
 
 - **Level 2 (all layers active)** — enabled by default
-- User can adjust via: `/omnifree compress <0|1|2>`
+- User can adjust via: `/use compress <0|1|2>`
 - Level 0: Off
 - Level 1: Deduplication + Semantic compression
 - Level 2: All 3 layers (dedup + semantic + smart truncation)
@@ -221,7 +221,7 @@ if (estimatedTokens > model.contextWindow * 0.9):
 Track and display token savings:
 
 ```bash
-/omnifree compress stats
+/use compress stats
 
 # Output:
 # Session tokens saved: 12,847 (34% reduction)
@@ -237,29 +237,31 @@ Track and display token savings:
 
 ### 5.1 Plugin Architecture
 
+OmniFree installs as `omnifree` (npm / plugin registry) and registers the **canonical short skill `/use`** in Claude Code — `/use` is the only user-facing word; `/omnifree` is a documented alias.
+
 OmniFree registers as a Claude Code skill with the following components:
 
 1. **Model Proxy** — Intercepts Claude Code's model requests, routes through provider pool
-2. **Slash Commands** — Status, strategy switching, provider management
+2. **Slash Commands (`/use …`)** — Status, strategy switching, provider management
 3. **Background Quota Tracker** — Monitors usage across all providers
 
 ### 5.2 Command Interface
 
 ```bash
 # Status and monitoring
-/omnifree status                 # Current routing + quota levels
-/omnifree providers              # List providers + their quota status
-/omnifree compress stats         # See tokens saved this session
+/use status                 # Current routing + quota levels
+/use providers              # List providers + their quota status
+/use compress stats         # See tokens saved this session
 
 # Configuration
-/omnifree strategy <name>        # Switch routing strategy (priority|round-robin|cost)
-/omnifree compress <0|1|2>       # Adjust compression level
-/omnifree config                 # Interactive setup wizard
+/use strategy <name>        # Switch routing strategy (priority|round-robin|cost)
+/use compress <0|1|2>       # Adjust compression level
+/use config                 # Interactive setup wizard
 
 # Provider management
-/omnifree provider add <name>    # Add custom provider (advanced)
-/omnifree provider remove <name> # Remove a provider
-/omnifree provider disable <name># Temporarily disable a provider
+/use provider add <name>    # Add custom provider (advanced)
+/use provider remove <name> # Remove a provider
+/use provider disable <name># Temporarily disable a provider
 ```
 
 ### 5.2.1 Unified Bash+Chat CLI (one line, intent-inferred)
@@ -330,7 +332,7 @@ Options:
 
 **Trigger:**
 - Automatic: When any provider's projected exhaustion < 2 hours
-- Manual: `/omnifree forecast`
+- Manual: `/use forecast`
 
 ### 6.2 Context Handoff (Cross-Provider Continuity)
 
@@ -365,9 +367,9 @@ interface ContextHandoff {
 
 **Configuration:**
 ```bash
-/omnifree emergency local        # Enable local model fallback
-/omnifree emergency skip         # Stop on provider exhaustion
-/omnifree emergency status       # Check if local model available
+/use emergency local        # Enable local model fallback
+/use emergency skip         # Stop on provider exhaustion
+/use emergency status       # Check if local model available
 ```
 
 **Local Model Requirements:**
@@ -379,7 +381,7 @@ interface ContextHandoff {
 ```
 ⚠ All providers exhausted. Switching to local model (Ollama llama3.2)
   Note: Local models may be slower and less capable than cloud providers.
-  Type /omnifree emergency skip to disable local fallback.
+  Type /use emergency skip to disable local fallback.
 ```
 
 ### 6.4 Session Cost Dashboard
@@ -403,7 +405,7 @@ interface ContextHandoff {
 
 **Trigger:**
 - Automatic: On session end
-- Manual: `/omnifree savings`
+- Manual: `/use savings`
 
 ### 6.5 Provider Watchdog (Automated Health Monitoring)
 
@@ -437,7 +439,7 @@ async function healthCheck(provider: ProviderAdapter): Promise<void> {
 ```
 
 **Status Updates:**
-- Visible via `/omnifree providers` command
+- Visible via `/use providers` command
 - Shows: `healthy | degraded | down | cooldown`
 - Automatic refresh every 15 minutes
 
@@ -617,16 +619,16 @@ npm install -g @claude-plugins/omnifree
 
 ```bash
 # Interactive wizard (guided)
-/omnifree config
+/use config
 
 # Manual setup
-/omnifree strategy priority
-/omnifree compress 2
+/use strategy priority
+/use compress 2
 ```
 
 ### 9.3 Configuration File
 
-Location: `~/.claude/plugins/omnifree/config.json`
+Location: `~/.claude/plugins/use/config.json`
 
 ```json
 {

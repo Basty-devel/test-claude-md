@@ -3731,17 +3731,17 @@ describe('OmniFreePlugin', () => {
     expect(plugin).toBeDefined();
   });
 
-  it('should handle /omnifree status command', () => {
+  it('should handle /use status command', () => {
     const result = plugin.handleCommand('status', []);
     expect(result).toContain('📊');
   });
 
-  it('should handle /omnifree strategy command', () => {
+  it('should handle /use strategy command', () => {
     const result = plugin.handleCommand('strategy', ['round-robin']);
     expect(result).toContain('round-robin');
   });
 
-  it('should handle /omnifree compress command', () => {
+  it('should handle /use compress command', () => {
     const result = plugin.handleCommand('compress', ['1']);
     expect(result).toContain('1');
   });
@@ -3932,16 +3932,16 @@ A Claude Code plugin providing free-tier AI provider routing with token compress
 ## Commands
 
 ```bash
-/omnifree status                 # Current routing + quota levels
-/omnifree strategy <name>        # Switch strategy (priority|round-robin|cost)
-/omnifree compress <0|1|2>       # Adjust compression level
-/omnifree providers              # List providers + their quota status
-/omnifree savings                # See session cost savings
+/use status                 # Current routing + quota levels
+/use strategy <name>        # Switch strategy (priority|round-robin|cost)
+/use compress <0|1|2>       # Adjust compression level
+/use providers              # List providers + their quota status
+/use savings                # See session cost savings
 ```
 
 ## Configuration
 
-Config file: `~/.claude/plugins/omnifree/config.json`
+Config file: `~/.claude/plugins/use/config.json`
 
 ```json
 {
