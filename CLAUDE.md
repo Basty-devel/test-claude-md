@@ -160,3 +160,67 @@ When escalation is required, include: the specific blocking ambiguity or violati
 
 (Appended by a second /refine-prompt run to test the append path — this
 duplicates the content above, which is expected for this manual test.)
+
+---
+
+## 8. Project Skill: OmniFree — Unified `/use` CLI
+
+OmniFree installs as `omnifree` (npm / plugin registry: `@claude-plugins/omnifree`, `/plugin install omnifree`) and registers the canonical short skill **`/use`** in Claude Code. `/omnifree` remains a documented alias — `/use` is the only word needed in-session. This is the project-specific guardrail for all “Bash-and-chat in one” interactions.
+
+### 8.1 Purpose
+
+One quoted command line — intent-inferred execution — for both shell work and chat across 8 free-tier providers (chat, code, image), maximizing quota utilization via token compression and intelligent routing. Design spec is [`docs/superpowers/specs/2026-09-12-omnifree-plugin-design.md`](docs/superpowers/specs/2026-09-12-omnifree-plugin-design.md) §5.2–§5.4 + §5.2.1; implementation plan is [`docs/superpowers/plans/2026-09-12-omnifree-plugin.md`](docs/superpowers/plans/2026-09-12-omnifree-plugin.md) Task 15. Do not re-specify or re-design the CLI outside those files — this section is the operational summary for the coding agent.
+
+### 8.2 How `/use` works
+
+* **Bash intent** if the quoted string contains shell-ish signals — pipe/redirection/heredoc tokens (`|  >  >>  <  <<  &&  ||  $(  \``), path-ish `./ ../ /bin/ /usr/`, `sudo`/`npm`/`npx`/`git`/`docker`/`make`/`pip`/`yarn` lead, or a trailing single-char sentinel `!`/`$`. Executed via the local shell (`child_process.exec`) with cwd preserved; `stdout`/`stderr` streamed back into the response channel. Never loads provider credentials on the Bash path.
+* **Chat intent** otherwise — natural language, code questions, prompts, or a `.`/`?` heuristic. Routed via `Pool` → `Router` to a chat provider and returned inline.
+* **Heuristic override:** the runtime does not re-prompt. If inference is wrong, reissue with the other phrasing or with an explicit prefix: `bash: …` or `chat: …`. No split `omnifree bash …` vs `omnifree chat …` subcommands — one canonical path.
+* **Invariants:** the whole command is **one quoted string** (avoids host shell splitting). Chat turns run through the compressor at the configured level (Level 2 by default). Quota usage is attributed to the routed provider; failures fall back per `Pool`/`Router`. All free providers are listed with real free tiers (§2.1).
+
+### 8.3 Commands
+
+```bash
+# Unified dispatch — one string, intent inferred
+/use "summarize this PR"                # chat
+/use "git log -1 --stat"                # bash
+/use "explain src/providers/GroqProvider.ts"   # chat
+/use "ls -la src"                       # bash
+/use "bash: who am i"                   # forced bash
+/use "chat: ls -la"                     # forced chat (treats as prompt)
+
+# Status and monitoring
+/use status                 # Current routing + quota levels
+/use providers              # List providers + their quota status
+/use compress stats         # See tokens saved this session
+
+# Configuration
+/use strategy <name>        # Switch routing strategy (priority|round-robin|cost)
+/use compress <0|1|2>       # Adjust compression level (Level 2 by default)
+/use config                 # Interactive setup wizard
+
+# Provider management
+/use provider add <name>    # Add custom provider (advanced)
+/use provider remove <name> # Remove a provider
+/use provider disable <name># Temporarily disable a provider
+
+# Forecast / emergency / savings (per spec §6)
+/use forecast               # Quota exhaustion projection
+/use emergency local        # Enable local-model fallback (Ollama/llama.cpp)
+/use emergency skip         # Stop on provider exhaustion
+/use savings                # Session cost dashboard
+```
+
+### 8.4 Usage message
+
+When a user enters `/use` with no following text (bare `/use`), the tool replies with an actionable help card on the native Desktop App chat card — not in the Claude Browser tab — and returns usage without side effects. All real slot docs remain in the design spec (`§5.2`, `§5.2.1`); this CLAUDE.md section is the single operational surface agents must honor.
+
+### 8.5 Implementation note
+
+Do not implement the CLI logic ad-hoc in ad-hoc scripts. The only place for the inferred dispatch is the plan's `src/cli.ts` (Task 15) — `inferIntent()` + `dispatch()` — and the slash-command wiring in `src/commands/`.
+
+---
+
+## 9. Parallel Execution Rule
+
+**Whenever possible and beneficial, run up to 4 subagents in parallel.** Independent tasks (different files, no shared state) should fan out to fill 4 concurrent slots. The controller manages the queue; implementers and reviewers run in parallel without waiting for each other unless a later task depends on an earlier task's interfaces. This rule applies to all SDD runs and any work the controller spawns.
