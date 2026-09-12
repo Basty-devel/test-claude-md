@@ -25,4 +25,19 @@ describe('TokenCounter', () => {
     const count = TokenCounter.fromUsage(usage);
     expect(count).toBe(150);
   });
+
+  it('should return 0 for countMessages with empty array', () => {
+    const count = TokenCounter.countMessages([]);
+    expect(count).toBe(0);
+  });
+
+  it('should sum tokens across multiple messages', () => {
+    const messages = [
+      { content: 'Hello' },       // 5 chars => ceil(5/4) = 2
+      { content: 'World' },       // 5 chars => ceil(5/4) = 2
+      { content: 'Test message' } // 12 chars => ceil(12/4) = 3
+    ];
+    const count = TokenCounter.countMessages(messages);
+    expect(count).toBe(7);
+  });
 });

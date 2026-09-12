@@ -1,4 +1,5 @@
 import { QuotaStatus, ProviderRequest, ProviderResponse } from '../types';
+import { TokenCounter } from '../utils/TokenCounter';
 
 export interface ProviderAdapter {
   name: string;
@@ -43,6 +44,6 @@ export class ConcreteProvider implements ProviderAdapter {
   }
 
   estimateTokens(text: string): number {
-    return Math.ceil(text.length / 4);
+    return TokenCounter.estimate(text);
   }
 }
