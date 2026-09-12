@@ -56,4 +56,23 @@ describe('Router', () => {
 
     expect(mockProvider.quota.remaining).toBe(990);
   });
+
+  it('should throw error when strategy returns null despite available providers', async () => {
+    const nullStrategy = {
+      select: vi.fn().mockReturnValue(null),
+      setPriority: vi.fn()
+    };
+
+    const nullStrategyRouter = new Router(pool, nullStrategy as unknown as PriorityStrategy);
+
+    const request = { prompt: 'Hello', taskType: 'chat' as const };
+    await expect(nullStrategyRouter.route(request)).rejects.toThrow(
+      'Strategy returned no provider for chat'
+    );
+
+    expect(nullStrategy.select).toHaveBeenCalledWith(
+      expect.arrayContaining([mockProvider]),
+      'chat'
+    );
+  });
 });

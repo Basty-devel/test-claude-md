@@ -20,7 +20,7 @@ export class Router {
 
     const selected = this.strategy.select(providers, request.taskType);
     if (!selected) {
-      throw new Error(`No available providers for ${request.taskType}`);
+      throw new Error(`Strategy returned no provider for ${request.taskType}`);
     }
 
     const response = await selected.route(request);
