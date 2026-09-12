@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
 import { MistralProvider } from '../../src/providers/MistralProvider';
 import { ProviderRequest } from '../../src/types';
 
@@ -148,5 +148,57 @@ describe('MistralProvider', () => {
         },
       })
     );
+  });
+
+  it('should sleep when two requests occur within 1000ms', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    const mockResponse = {
+      choices: [{ message: { content: 'Response' } }],
+      usage: { prompt_tokens: 5, completion_tokens: 5 },
+    };
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockResponse),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const sleepSpy = vi.spyOn(global, 'setTimeout');
+
+    const request: ProviderRequest = { prompt: 'First', taskType: 'chat' };
+
+    // First request should not sleep
+    const firstPromise = provider.route(request);
+    await vi.advanceTimersByTimeAsync(0);
+    await firstPromise;
+
+    expect(sleepSpy).not.toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.any(Number)
+    );
+
+    // Advance time by 100ms (less than 1000ms rate limit)
+    vi.advanceTimersByTime(100);
+
+    const secondRequest: ProviderRequest = { prompt: 'Second', taskType: 'chat' };
+    const secondPromise = provider.route(secondRequest);
+
+    // The route should have triggered a setTimeout with the remaining ms (1000 - 100 = 900)
+    const setTimeoutCalls = sleepSpy.mock.calls.filter(
+      ([fn, ms]) => typeof fn === 'function' && typeof ms === 'number' && ms > 0
+    );
+    expect(setTimeoutCalls.length).toBeGreaterThanOrEqual(1);
+    const sleepDuration = setTimeoutCalls[setTimeoutCalls.length - 1][1] as number;
+    expect(sleepDuration).toBeGreaterThanOrEqual(899);
+    expect(sleepDuration).toBeLessThanOrEqual(901);
+
+    // Advance fake timers to let the sleep resolve
+    await vi.advanceTimersByTimeAsync(1000);
+    await secondPromise;
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    vi.useRealTimers();
   });
 });

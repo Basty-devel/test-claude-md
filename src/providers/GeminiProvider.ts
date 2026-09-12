@@ -1,6 +1,5 @@
 import { ConcreteProvider } from './ProviderAdapter';
 import { ProviderRequest, ProviderResponse } from '../types';
-import { TokenCounter } from '../utils/TokenCounter';
 
 export class GeminiProvider extends ConcreteProvider {
   private static readonly BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
