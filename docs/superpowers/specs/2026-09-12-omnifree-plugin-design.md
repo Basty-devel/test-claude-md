@@ -262,6 +262,16 @@ OmniFree registers as a Claude Code skill with the following components:
 /omnifree provider disable <name># Temporarily disable a provider
 ```
 
+### 5.2.1 Unified Bash+Chat CLI (one line, intent-inferred)
+
+The plugin exposes a single intent-inferred entry point — one command line for both Bash and chat. It auto-detects intent from content and environment:
+
+* **Bash intent:** shell-ish tokens (piped commands, paths, flags, redirection, heredocs) or a trailing `!`/`$` sentinel; executed via the local shell with cwd preserved.
+* **Chat intent:** natural language, code questions, prompts, or a `.`/`?` heuristic; routed through the usual provider Pool/Router to a chat provider and returned inline.
+* **Heuristic override:** the runtime does not re-prompt; if inference is wrong the user reissues with the "other" phrasing (or prefixes with `bash:`/`chat:`). Single canonical path, no split `omnifree bash …` vs `omnifree chat …` subcommands.
+
+Behavioral invariants: commands are **quoted as one string** to avoid shell splitting by the host CLI; stdout/stderr are captured and streamed back into the response channel; chat turns run through the compressor at the configured level; quota usage is attributed to the routed provider; failures fall back per Pool/Router.
+
 ### 5.3 Transparent Status Display
 
 After each request, show a minimal status line:

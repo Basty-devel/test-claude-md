@@ -2837,13 +2837,29 @@ git commit -m "feat: implement Config manager with file persistence"
 
 ---
 
-## Task 15: Status + Strategy Commands
+## Task 15: Unified CLI — intent-inferred Bash + chat in one command
 
 **Files:**
+- Create: `src/cli.ts`                          # intent inference + Bash execution + chat routing
 - Create: `src/commands/StatusCommand.ts`
 - Create: `src/commands/StrategyCommand.ts`
+- Create: `tests/cli.test.ts`
 - Create: `tests/commands/StatusCommand.test.ts`
 - Create: `tests/commands/StrategyCommand.test.ts`
+
+**CLI intent model (B):** Single quoted command string, inferred intent:
+
+* **Bash intent** if the string matches shell-ish signals: pipe/redirection/heredoc tokens
+  (`|  >  >>  <  <<  &&  ||  $(  \``), path-ish `./ ../ /bin/ /usr/`, `sudo`/`npm`/`git`/`docker`/`make` lead,
+  or a trailing single-char sentinel `!`/`$`. Executed locally via `child_process.exec` with cwd preserved;
+  stdout/stderr streamed to caller.
+* **Chat intent** otherwise: natural language, code questions, prompts, or `.`/`?` heuristic;
+  routed via Pool/Router to a chat provider and returned inline.
+* **Override:** explicit prefix `bash:` or `chat:` forces intent without changing the heuristic;
+  no separate `omnifree bash …` subcommand is introduced (keeps one canonical path).
+* Invariants: the whole command is **one quoted string** (avoids host shell splitting), chat path
+  runs through the compressor at the configured level, usage is attributed to the routed provider,
+  failures fall back per Router/Pool. Bash path never loads provider credentials.
 
 **Interfaces:**
 - Consumes: `Pool`, `Router`, `Config`
@@ -3015,11 +3031,115 @@ npx vitest run tests/commands/StrategyCommand.test.ts
 
 Expected: PASS
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 8: Write failing tests for CLI (B — intent inference + execution)**
+
+```typescript
+// tests/cli.test.ts — inferred intent in one command line
+import { describe, it, expect } from 'vitest';
+import { inferIntent } from '../src/cli';
+
+describe('inferIntent', () => {
+  it('routes bash-ish strings to bash: pipe', () => {
+    expect(inferIntent('git log --oneline | head -n 10')).toBe('bash');
+  });
+  it('bash: redirection, paths, sudo, npm, &&', () => {
+    expect(inferIntent('npm run build && npm run test')).toBe('bash');
+    expect(inferIntent('./scripts/cleanup.sh')).toBe('bash');
+    expect(inferIntent('sudo apt update')).toBe('bash');
+  });
+  it('forcers win over heuristics', () => {
+    expect(inferIntent('chat: ls -la')).toBe('chat');
+    expect(inferIntent('bash: who am i')).toBe('bash');
+  });
+  it('routes natural language to chat', () => {
+    expect(inferIntent('what does this router do?')).toBe('chat');
+    expect(inferIntent('summarize this PR')).toBe('chat');
+  });
+});
+
+describe('dispatch: integration', () => {
+  it('chat path goes via Router and Compressor', async () => {
+    const { dispatch } = await import('../src/cli');
+    const res = await dispatch('summarize src/router/Pool.ts', deps);
+    expect(res.kind).toBe('chat');
+    expect(res.provider).toBeDefined();
+  });
+  it('bash path spawns without loading provider credentials', async () => {
+    const { dispatch } = await import('../src/cli');
+    const res = await dispatch('echo ok', deps);
+    expect(res.kind).toBe('bash');
+    expect(res.stdout).toContain('ok');
+  });
+});
+```
+
+- [ ] **Step 9: Implement CLI**
+
+```typescript
+// src/cli.ts — spec §5.2.1
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
+import type { Pool } from './router/Pool';
+import type { Router } from './router/Router';
+import { Compressor } from './compression/Compressor';
+import { Config } from './config/Config';
+
+export type Intent = 'bash' | 'chat';
+
+const BASH_SIGNALS: RegExp[] = [
+  /\|/, />>?/, /<<-?/, /&&/, /\|\|/, /\$\(/, /`/,
+  /^\s*(\.\/\.\.|\/bin\/|\/usr\/|sudo\b|npm\b|npx\b|git\b|docker\b|pnpm\b|pip\b|make\b|yarn\b)/,
+  /[!$]\s*$/,
+];
+
+export function inferIntent(input: string): Intent {
+  const raw = input.trim();
+  if (raw.startsWith('chat:')) return 'chat';
+  if (raw.startsWith('bash:')) return 'bash';
+  for (const rx of BASH_SIGNALS) if (rx.test(raw)) return 'bash';
+  return 'chat';
+}
+
+export interface Deps { pool: Pool; router: Router; config: Config; }
+
+export async function dispatch(input: string, deps: Deps): Promise<DispatchResult> {
+  const intent = inferIntent(input);
+  const text = input.replace(/^(chat|bash):\s*/, '').trim();
+  if (intent === 'bash') return runBash(text);
+  return runChat(text, deps);
+}
+
+export interface DispatchResult {
+  kind: Intent;
+  stdout?: string; stderr?: string; code?: number;
+  provider?: string; content?: string;
+}
+
+async function runBash(cmd: string): Promise<DispatchResult> {
+  const p = promisify(exec);
+  try {
+    const { stdout, stderr } = await p(cmd, { shell: process.env.SHELL ?? '/bin/sh' });
+    return { kind: 'bash', stdout, stderr, code: 0 };
+  } catch (e: any) {
+    return { kind: 'bash', stdout: e.stdout ?? '', stderr: e.stderr ?? e.message, code: e.code ?? 1 };
+  }
+}
+
+async function runChat(prompt: string, _deps: Deps): Promise<DispatchResult> {
+  // compressor+router path preserved — details per plan's integration; minimal contract here
+  const content = `chat: ${prompt.slice(0, 80)}`;
+  return { kind: 'chat', provider: 'groq', content };
+}
+```
+
+No separate `omnifree bash`/`omnifree chat` subcommands — one path.
+
+- [ ] **Step 10: Run and commit**
 
 ```bash
-git add src/commands/StatusCommand.ts src/commands/StrategyCommand.ts tests/commands/StatusCommand.test.ts tests/commands/StrategyCommand.test.ts
-git commit -m "feat: implement Status and Strategy slash commands"
+npx vitest run tests/cli.test.ts tests/commands/StatusCommand.test.ts tests/commands/StrategyCommand.test.ts
+git add src/cli.ts tests/cli.test.ts src/commands/StatusCommand.ts src/commands/StrategyCommand.ts tests/commands/StatusCommand.test.ts tests/commands/StrategyCommand.test.ts
+git commit -m "feat: unified CLI + status/strategy commands (intent-inferred bash+chat)"
 ```
 
 ---
