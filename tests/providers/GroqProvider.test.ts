@@ -3,6 +3,7 @@ import { GroqProvider } from '../../src/providers/GroqProvider';
 import { ProviderRequest } from '../../src/types';
 
 describe('GroqProvider', () => {
+  const DAILY_LIMIT = 14000;
   let provider: GroqProvider;
 
   beforeEach(() => {
@@ -46,6 +47,80 @@ describe('GroqProvider', () => {
     expect(response.content).toBe('Hello!');
     expect(response.provider).toBe('groq');
     expect(response.tokensUsed).toBe(15);
+  });
+
+  it('should throw Groq quota exhausted when quota is not available', async () => {
+    provider.quota.available = false;
+
+    const request: ProviderRequest = {
+      prompt: 'Hello',
+      taskType: 'chat',
+    };
+
+    await expect(provider.route(request)).rejects.toThrow('Groq quota exhausted');
+  });
+
+  it('should decrement quota remaining by tokens used after successful route', async () => {
+    const mockResponse = {
+      choices: [{ message: { content: 'Hello!' } }],
+      usage: { prompt_tokens: 10, completion_tokens: 5 },
+    };
+
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockResponse),
+    } as Response);
+
+    const request: ProviderRequest = {
+      prompt: 'Hello',
+      taskType: 'chat',
+    };
+
+    await provider.route(request);
+
+    expect(provider.quota.remaining).toBe(DAILY_LIMIT - 15);
+  });
+
+  it('should mark quota as unavailable when remaining reaches zero', async () => {
+    provider.quota.remaining = 10;
+
+    const mockResponse = {
+      choices: [{ message: { content: 'Hello!' } }],
+      usage: { prompt_tokens: 10, completion_tokens: 5 },
+    };
+
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockResponse),
+    } as Response);
+
+    const request: ProviderRequest = {
+      prompt: 'Hello',
+      taskType: 'chat',
+    };
+
+    await provider.route(request);
+
+    expect(provider.quota.remaining).toBeLessThanOrEqual(0);
+    expect(provider.quota.available).toBe(false);
+  });
+
+  it('should throw a contextual error when the response is missing usage data', async () => {
+    const mockResponse = {
+      choices: [{ message: { content: 'Hello!' } }],
+    };
+
+    vi.mocked(global.fetch).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockResponse),
+    } as Response);
+
+    const request: ProviderRequest = {
+      prompt: 'Hello',
+      taskType: 'chat',
+    };
+
+    await expect(provider.route(request)).rejects.toThrow('Groq API error: malformed response');
   });
 
   it('should throw error on API failure', async () => {
