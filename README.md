@@ -51,6 +51,23 @@ All six billing buckets surface in `/use compress stats`; the un-billed transpor
 
 > 📸 **Happens-before:** Every free-pool request + pre-routing chat prompt passes through `src/compression/` **before** provider selection and billing — including when the free pool isn't exhausted. No bypass.
 
+## Benchmarks — billed-token proxy
+
+Real compression runs via [`benchmarks/compression-benchmark.ts`](benchmarks/compression-benchmark.ts) (`npx tsx benchmarks/compression-benchmark.ts` → [`COMPRESSION_BENCHMARK.md`](COMPRESSION_BENCHMARK.md)). **Metric:** `Math.ceil(chars / 4)` billed-token proxy; levels `0=off · 1=dedup+semantic · 2=all · 3=+toolResult+pruner+cachePin`.
+
+| Scenario | L2 | Saved | % | L3 | Saved | % |
+|---|---:|---:|---:|---:|---:|---:|
+| Simple chat (baseline) | 2 | 0 / 21 | 0% | 3* | 0 / 21 | 0% |
+| Repeated file paste (3× ~1k tok) | 2 | 0 / 1,037 | 0% | 3* | 1,242 / 1,037 | 120% |
+| Filler text + code fences | 2 | 29 / 132 | 22% | 3* | 91 / 132 | 69% |
+| Long conversation (truncation @ 1k window) | 2 | 52 / 1,477 | 4% | 3* | 52 / 1,477 | 4% |
+| Chatty tool output | 2 | 0 / 830 | 0% | 3* | 0 / 830 | 0% |
+| Mixed code + realistic session | 2 | 7 / 77 | 9% | 3* | 7 / 77 | 9% |
+| Re-pasted large file (3× 2.5k) | 2 | 2,857 / 2,030 | 141% | 3* | 4,416 / 2,030 | 218% |
+| **Avg (all scenarios)** | **2** | **2,945** | **25%** | **3*** | **5,808** | **60%** |
+
+**Legend:** `L = compression level (3* = opt-in, proof-at-L3 > L2 on re-pasted file 3× session). Cache is advisory and bills 0 in this synthetic run (no stable-prefix cache hit).` Full table: [`COMPRESSION_BENCHMARK.md`](COMPRESSION_BENCHMARK.md).
+
 ---
 
 ## Providers (8 × verified free tier, no credit card)
