@@ -215,5 +215,8 @@ Quality gates per `CLAUDE.md`:
 
 Implementation plan: [`docs/superpowers/plans/`](docs/superpowers/plans/).
 
-License: **ISC** (per `package.json`).
-Maintainer: **Basty-devel**.
+License: **PolyForm Noncommercial 1.0.0** — see [`LICENSE`](LICENSE) and [`PUBLIC_KEY.asc`](PUBLIC_KEY.asc).
+
+Noncommercial use (personal, research, education, non-commercial org) is free. Commercial use needs a separate licence; contact [sebastian.nestler@tutanota.de](mailto:sebastian.nestler@tutanota.de) (PGP fingerprint `249C79B407B88BD985FBD168F2A2767E68F2D83F`).
+
+Maintainer: **Sebastian Friedrich Nestler** (`sebastian.nestler@tutanota.de`).

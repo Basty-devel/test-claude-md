@@ -10,8 +10,8 @@
     "test": "vitest run"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Sebastian Friedrich Nestler <sebastian.nestler@tutanota.de>",
+  "license": "PolyForm-Noncommercial-1.0.0",
   "type": "commonjs",
   "devDependencies": {
     "@types/node": "^22.20.2",
