@@ -2,7 +2,7 @@
 
 > **One slash, zero setup — `/use`**
 
-OmniFree is a **Claude Code plugin** that routes every request through **8 verified free-tier providers** (chat, code, image) and reclaims your quota with **level-2-by-default token compression**. One quoted command line decides Bash vs chat; you never split into `omnifree bash …` / `omnifree chat …`. A plugin is installed as `omnifree`, exposed as the canonical short skill `/use` — `/omnifree` is the documented alias.
+OmniFree is a **Claude Code plugin** that routes every request through **8 verified free-tier providers** (chat, code, image) and reclaims your quota with **level-2-by-default token compression**. One quoted command line decides Bash vs chat; you never split into `omnifree bash …` / `omnifree chat …`. A plugin is installed as `@basty/omnifree`, exposed as the canonical short skill `/use` — `/omnifree` is the documented alias.
 
 > "Write a solidity test" + "run my tests" — same line style, different execution.
 >
@@ -10,6 +10,25 @@ OmniFree is a **Claude Code plugin** that routes every request through **8 verif
 > /use "write tests for src/router/Pool.ts"
 > /use "git log -1 --stat"
 > ```
+
+---
+
+## Installation
+
+### npm
+
+```bash
+npm install -g @basty/omnifree@latest   
+/omnifree        # alias; canonical is /use
+```
+
+### From source
+
+```bash
+npm install && npm run dev           # if present in this checkout
+```
+
+Config: `~/.claude/plugins/omnifree/config.json` (created on save).
 
 ---
 
@@ -139,34 +158,6 @@ Provider branching is 100% tested for coverage on critical paths.
 /use --help                 # Slash reference
 /use -h                     # Slash reference
 ```
-
----
-
-## Installation
-
-### Claude Code plugin (recommended)
-
-```bash
-/plugin install omnifree            # Claude Code Plugin tab
-# invoke with:
-/use "hello"                        # chat
-/use "find . -name '*.ts' -type f" # bash
-```
-
-### npm
-
-```bash
-npm install -g @claude-plugins/omnifree   # ships the skill list incl. /use
-/omnifree        # alias; canonical is /use
-```
-
-### From source
-
-```bash
-npm install && npm run dev           # if present in this checkout
-```
-
-Config: `~/.claude/plugins/omnifree/config.json` (created on save).
 
 ---
 
