@@ -1,0 +1,15 @@
+{
+  "$schema": "https://code.claude.com/schemas/plugin.json",
+  "name": "omnifree",
+  "displayName": "OmniFree",
+  "version": "1.0.0",
+  "description": "One slash, zero setup — /use. Routes every request through 8 verified free-tier providers (chat, code, image) with level-2 token compression. Bash vs chat intent inferred from one quoted string.",
+  "author": {
+    "name": "Sebastian Friedrich Nestler",
+    "email": "sebastian.nestler@tutanota.de"
+  },
+  "homepage": "https://github.com/Basty-devel/test-claude-md",
+  "repository": "https://github.com/Basty-devel/test-claude-md",
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "keywords": ["free", "router", "compression", "slash-command", "bash", "chat", "multi-provider"]
+}

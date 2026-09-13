@@ -1,18 +1,45 @@
 {
-  "name": "test-claude-md",
+  "name": "@basty/omnifree",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "directories": {
-    "doc": "docs"
+  "description": "One slash, zero setup — /use. Routes every request through 8 verified free-tier providers (chat, code, image) with level-2 token compression. Bash vs chat intent inferred from one quoted string.",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
   },
   "scripts": {
-    "test": "vitest run"
+    "build": "tsc",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build"
   },
-  "keywords": [],
+  "files": [
+    "dist/**/*",
+    ".claude-plugin/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "free",
+    "router",
+    "compression",
+    "slash-command",
+    "bash",
+    "chat",
+    "multi-provider",
+    "claude-code",
+    "plugin"
+  ],
   "author": "Sebastian Friedrich Nestler <sebastian.nestler@tutanota.de>",
   "license": "PolyForm-Noncommercial-1.0.0",
-  "type": "commonjs",
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "devDependencies": {
     "@types/node": "^22.20.2",
     "typescript": "^7.0.2",
@@ -20,5 +47,10 @@
   },
   "dependencies": {
     "zstd-napi": "^0.0.13"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Basty-devel/test-claude-md.git"
+  },
+  "homepage": "https://github.com/Basty-devel/test-claude-md"
 }

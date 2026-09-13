@@ -165,7 +165,7 @@ duplicates the content above, which is expected for this manual test.)
 
 ## 8. Project Skill: OmniFree — Unified `/use` CLI
 
-OmniFree installs as `omnifree` (npm / plugin registry: `@claude-plugins/omnifree`, `/plugin install omnifree`) and registers the canonical short skill **`/use`** in Claude Code. `/omnifree` remains a documented alias — `/use` is the only word needed in-session. This is the project-specific guardrail for all “Bash-and-chat in one” interactions.
+OmniFree installs as `@basty/omnifree` (npm registry: `/plugin install @basty/omnifree`) and registers the canonical short skill **`/use`** in Claude Code. `/omnifree` remains a documented alias — `/use` is the only word needed in-session. This is the project-specific guardrail for all “Bash-and-chat in one” interactions.
 
 ### 8.1 Purpose
 
@@ -224,3 +224,84 @@ Do not implement the CLI logic ad-hoc in ad-hoc scripts. The only place for the 
 ## 9. Parallel Execution Rule
 
 **Whenever possible and beneficial, run up to 4 subagents in parallel.** Independent tasks (different files, no shared state) should fan out to fill 4 concurrent slots. The controller manages the queue; implementers and reviewers run in parallel without waiting for each other unless a later task depends on an earlier task's interfaces. This rule applies to all SDD runs and any work the controller spawns.
+
+---
+
+## 10. Publishing & Marketplace Guardrails
+
+### 10.1 npm Registry — `@basty/omnifree`
+
+**Package name is `@basty/omnifree`, not `omnifree`.** The npm org `Basty-devel` owns the scope. Publishing without scope (`omnifree`) fails with `403 — You may not perform that action with these credentials` if your token is scoped to `@basty/*`.
+
+**Pre-publish checklist:**
+
+1. `package.json` must have:
+   ```
+   "name": "@basty/omnifree"
+   "main": "./dist/index.js"
+   "types": "./dist/index.d.ts"
+   "files": ["dist/**/*", ".claude-plugin/**/*", "README.md", "LICENSE"]
+   "type": "module"
+   "engines": { "node": ">=20.0.0" }
+   ```
+   Type is `module` (ESM) — `tsconfig.json` emits `ESNext`/`bundler`. Do not use `commonjs`.
+2. Always run `npm run build` before publish. `dist/` is git-ignored but required in `files`.
+3. Token scope must cover the package. Verify before publishing:
+   ```bash
+   npm token list           # check scopes: should include @basty
+   npm whoami               # must not return ENEEDAUTH
+   ```
+   If the token is scoped to `@basty` only, publishing as `omnifree` (unscoped) will fail. Either rename to `@basty/omnifree` or create a legacy token (`npm token create --type=legacy`) with broader scope — prefer renaming.
+
+**2FA requirement:** npm requires 2FA for publish since Oct 2022. Options:
+- OTP per publish: `npm publish --otp <6-digit-code>` after enabling Authenticator app.
+- Granular Access Token with "Allow publishing without 2FA" (recommended). Generate at https://www.npmjs.com/settings/tokens. Verify `bypass_2fa: true` in `npm token list --json`. Without this flag, publish fails with `403 — Two-factor authentication or granular access token with bypass 2fa enabled is required`.
+
+**Publish command:** `npm publish --access public` (scoped packages default to private; omit → 402). Verify on https://www.npmjs.com/package/@basty/omnifree after push.
+
+### 10.2 .claude-plugin Manifest
+
+A repo that is a **plugin** (not a marketplace) must have `.claude-plugin/plugin.json`, not `marketplace.json`:
+
+```json
+{
+  "$schema": "https://code.claude.com/schemas/plugin.json",
+  "name": "omnifree",
+  "displayName": "OmniFree",
+  "version": "1.0.0",
+  "description": "…",
+  "homepage": "https://github.com/Basty-devel/test-claude-md",
+  "repository": "https://github.com/Basty-devel/test-claude-md"
+}
+```
+
+A **marketplace** is a separate repo with `.claude-plugin/marketplace.json` listing plugins via `"source": "github.com/org/repo"`. Do not confuse the two. The error `kein Manifest gefunden … Stelle sicher, dass du das Marketplace-Repository hinzufügst` means `claude plugin marketplace add` was pointed at a plugin repo instead of a marketplace repo.
+
+Validate before every release: `claude plugin validate .` — expect warning `CLAUDE.md at the plugin root is not loaded as project context` (use `skills/<name>/SKILL.md` for shipped context instead). `type: commonjs` in `package.json` with ESM output from `tsc` is a silent breakage — always `type: module`.
+
+### 10.3 README Installation Section — Single Source of Truth
+
+There must be **one** Installation section. Duplicate `# Installation` / `## Install` headings (e.g., an old `npm install -g @claude-plugins/omnifree` block alongside the canonical `@basty/omnifree@latest`) split the install story and break the user journey. Guard against duplication in review. Canonical install for users is:
+
+```md
+## Installation
+### npm
+\`\`\`bash
+npm install -g @basty/omnifree@latest   
+/omnifree        # alias; canonical is /use
+\`\`\`
+### From source
+\`\`\`bash
+npm install && npm run dev
+\`\`\`
+Config: \`~/.claude/plugins/omnifree/config.json\` (created on save).
+```
+
+Do not re-add `Claude Code plugin (recommended)` or `@claude-plugins/…` unless the npm scope changes again — the single source of truth is `package.json:name`.
+
+### 10.4 Lessons from 2026-09-13 Publish
+
+1. Checked `npm token list --json`; scope was `["@basty"]`, publish as `omnifree` → 403. Renamed to `@basty/omnifree` → publish succeeded.
+2. Initial publish without `bypass_2fa` → 403 E2FA. Recreated Granular Token with bypass flag → passed.
+3. Repo had no `.claude-plugin/` directory → `marketplace.json wurde kein Manifest gefunden`. Created `.claude-plugin/plugin.json` (plugin, not marketplace) → `validate` passed.
+4. Duplicate `## Installation` blocks accumulated across edits. Prune to one before committing.
