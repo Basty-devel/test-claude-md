@@ -72,11 +72,10 @@ export interface CodeBlock {
 export interface CompressionStats {
   totalSaved: number;
   percentage: number;
-  breakdown: {
-    deduplication: number;
-    semantic: number;
-    truncation: number;
-    toolResult: number;
-    promptPruner: number;
-  };
+  deduplication: number;
+  semantic: number;
+  truncation: number;
+  toolResult: number;
+  pruning: number;
+  cache: number;
 }

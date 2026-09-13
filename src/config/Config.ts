@@ -43,7 +43,7 @@ function deepMerge<T extends Record<string, any>>(target: T, source: Partial<T>)
 function validateConfig(config: any): config is Partial<PluginConfig> {
   if (!config || typeof config !== 'object') return false;
   if (config.strategy !== undefined && !['priority', 'round-robin', 'cost'].includes(config.strategy)) return false;
-  if (config.compression !== undefined && ![0, 1, 2].includes(config.compression)) return false;
+  if (config.compression !== undefined && ![0, 1, 2, 3].includes(config.compression)) return false;
   if (config.providers !== undefined && (typeof config.providers !== 'object' || Array.isArray(config.providers))) return false;
   return true;
 }

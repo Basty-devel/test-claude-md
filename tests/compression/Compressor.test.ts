@@ -21,9 +21,9 @@ describe('Compressor', () => {
     expect(result.compressed).toEqual(messages);
     expect(result.stats.totalSaved).toBe(0);
     expect(result.stats.percentage).toBe(0);
-    expect(result.stats.breakdown.deduplication).toBe(0);
-    expect(result.stats.breakdown.semantic).toBe(0);
-    expect(result.stats.breakdown.truncation).toBe(0);
+    expect(result.stats.deduplication).toBe(0);
+    expect(result.stats.semantic).toBe(0);
+    expect(result.stats.truncation).toBe(0);
   });
 
   it('should return empty messages unchanged at level 0', () => {
@@ -54,7 +54,7 @@ describe('Compressor', () => {
 
     const result = compressor.compress(messages, 1, 10000);
 
-    expect(result.stats.breakdown.semantic).toBeGreaterThan(0);
+    expect(result.stats.semantic).toBeGreaterThan(0);
   });
 
   it('should not apply truncation at level 1', () => {
@@ -73,7 +73,7 @@ describe('Compressor', () => {
     const result = compressor.compress(messages, 1, 50);
 
     expect(result.compressed).toHaveLength(messages.length);
-    expect(result.stats.breakdown.truncation).toBe(0);
+    expect(result.stats.truncation).toBe(0);
   });
 
   it('should return empty messages with zero stats at level 1', () => {
@@ -112,7 +112,7 @@ describe('Compressor', () => {
     const result = compressor.compress(messages, 2, 50);
 
     expect(result.compressed.length).toBeLessThan(messages.length);
-    expect(result.stats.breakdown.truncation).toBeGreaterThan(0);
+    expect(result.stats.truncation).toBeGreaterThan(0);
   });
 
   it('should not truncate when within context window at level 2', () => {
@@ -123,7 +123,7 @@ describe('Compressor', () => {
     const result = compressor.compress(messages, 2, 10000);
 
     expect(result.compressed).toHaveLength(1);
-    expect(result.stats.breakdown.truncation).toBe(0);
+    expect(result.stats.truncation).toBe(0);
   });
 
   it('should return empty messages with zero stats at level 2', () => {
@@ -146,9 +146,9 @@ describe('Compressor', () => {
 
     const result = compressor.compress(messages, 2, 10000);
 
-    const expectedTotal = result.stats.breakdown.deduplication
-      + result.stats.breakdown.semantic
-      + result.stats.breakdown.truncation;
+    const expectedTotal = result.stats.deduplication
+      + result.stats.semantic
+      + result.stats.truncation;
     expect(result.stats.totalSaved).toBe(expectedTotal);
   });
 
@@ -225,8 +225,8 @@ describe('Compressor', () => {
 
     const result = compressor.compress(messages, 2, 10000);
 
-    expect(result.stats.breakdown.toolResult).toBeGreaterThan(0);
-    expect(result.stats.totalSaved).toBeGreaterThanOrEqual(result.stats.breakdown.toolResult);
+    expect(result.stats.toolResult).toBeGreaterThan(0);
+    expect(result.stats.totalSaved).toBeGreaterThanOrEqual(result.stats.toolResult);
   });
 
   it('should have zero toolResult at level 1', () => {
@@ -235,7 +235,7 @@ describe('Compressor', () => {
 
     const result = compressor.compress(messages, 1, 10000);
 
-    expect(result.stats.breakdown.toolResult).toBe(0);
+    expect(result.stats.toolResult).toBe(0);
   });
 
   it('should accept level 3 without error', () => {
@@ -262,6 +262,63 @@ describe('Compressor', () => {
 
     expect(result.stats.totalSaved).toBeGreaterThan(0);
     // toolResult should contribute savings
-    expect(result.stats.breakdown.toolResult).toBeGreaterThanOrEqual(0);
+    expect(result.stats.toolResult).toBeGreaterThanOrEqual(0);
+  });
+});
+
+// --- Level 3 Integration: Task 25 cross-suite proof ---
+
+describe('Level 3 integration', () => {
+  let compressor: Compressor;
+
+  beforeEach(() => {
+    compressor = new Compressor();
+  });
+
+  it('stacks toolResult+pruner+cache on a re-pasted 2.5k file x3 session', async () => {
+    // ToolResultCompressor fires on messages > 70 lines (HEAD 50 + TAIL 20).
+    // File content inside fences is fence-protected; add long tool-output-style
+    // lines outside fences so ToolResultCompressor can collapse them.
+    const file = Array(40).fill('const x = 1; // ' + 'x'.repeat(80)).join('\n');
+    // 80+ tool-output lines outside fences → >70 line threshold → head/tail collapse
+    const longOutput = Array.from({ length: 90 }, (_, i) => `line-${i}: ` + 'y'.repeat(60)).join('\n');
+    const messages: Message[] = [
+      { role: 'user' as const, content: `Help with:\n \`\`\`ts\n${file}\n\`\`\`\n${longOutput}` },
+      { role: 'assistant' as const, content: 'Got it' },
+      { role: 'user' as const, content: `Help with:\n \`\`\`ts\n${file}\n\`\`\`\n${longOutput}` },
+      { role: 'user' as const, content: `Help with:\n \`\`\`ts\n${file}\n\`\`\`\n${longOutput}` },
+    ];
+    const r2 = compressor.compress(messages, 2, 32000);
+    const r3 = compressor.compress(messages, 3, 32000);
+    // ToolResult + pruning contribute at level 3
+    expect(r3.stats.toolResult + r3.stats.pruning).toBeGreaterThan(0);
+    expect(r3.stats.totalSaved).toBeGreaterThan(r2.stats.totalSaved);
+    // CachePin applied — bucket exists
+    expect(typeof r3.stats.cache).toBe('number');
+  });
+
+  it('compress stats surface all 6 buckets and explain is an extensible record', () => {
+    const r = compressor.compress([{ role: 'user', content: 'hello' }], 3, 32000);
+    expect(r).toHaveProperty('stats');
+    expect(r).toHaveProperty('explain');
+    expect(typeof r.explain).toBe('object');
+    // All 6 breakdown buckets exist
+    expect(typeof r.stats.deduplication).toBe('number');
+    expect(typeof r.stats.semantic).toBe('number');
+    expect(typeof r.stats.truncation).toBe('number');
+    expect(typeof r.stats.toolResult).toBe('number');
+    expect(typeof r.stats.pruning).toBe('number');
+    expect(typeof r.stats.cache).toBe('number');
+  });
+
+  it('level 3 explanation is extensible with string-valued record', () => {
+    const r = compressor.compress([{ role: 'user', content: 'test message' }], 3, 10000);
+    // explain must be Record<string, string> — extensible, not hardcoded
+    if (r.explain) {
+      for (const [key, value] of Object.entries(r.explain)) {
+        expect(typeof key).toBe('string');
+        expect(typeof value).toBe('string');
+      }
+    }
   });
 });

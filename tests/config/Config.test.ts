@@ -47,4 +47,30 @@ describe('Config', () => {
     expect(loaded.strategy).toBe('cost');
     expect(loaded.compression).toBe(2); // From defaults
   });
+
+  it('should accept compression level 3 without throwing', () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({
+      strategy: 'priority',
+      compression: 2
+    }));
+
+    const loaded = config.load();
+    loaded.compression = 3;
+
+    expect(() => config.save(loaded)).not.toThrow();
+    expect(fs.writeFileSync).toHaveBeenCalled();
+  });
+
+  it('should preserve compression level 3 after load', () => {
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({
+      strategy: 'priority',
+      compression: 3
+    }));
+
+    const loaded = config.load();
+
+    expect(loaded.compression).toBe(3);
+  });
 });

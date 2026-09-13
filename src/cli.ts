@@ -205,6 +205,41 @@ export class CLI {
       if (!strategy) return '❌ Usage: /use strategy <priority|round-robin|cost>';
       return this.strategyCommand.execute(strategy);
     }
-    return `❌ Unknown slash command: /use ${subcommand}. Available: status, strategy`;
+    if (subcommand === 'compress') {
+      const action = parts[1];
+      if (action === 'stats') return this.compressStats();
+      return '❌ Usage: /use compress stats';
+    }
+    return `❌ Unknown slash command: /use ${subcommand}. Available: status, strategy, compress`;
+  }
+
+  private compressStats(): string {
+    const level = this.config.load().compression;
+    const sample: Message[] = [
+      { role: 'user', content: 'Help with this code' },
+      { role: 'assistant', content: 'Sure, here is the solution.' },
+      { role: 'user', content: 'Help with this code' },
+    ];
+    const result = this.compressor.compress(sample, level, 32000);
+    const s = result.stats;
+    const lines = [
+      `Compression level: ${level}`,
+      `Buckets:`,
+      `  deduplication: ${s.deduplication}`,
+      `  semantic:      ${s.semantic}`,
+      `  truncation:    ${s.truncation}`,
+      `  toolResult:    ${s.toolResult}`,
+      `  pruning:       ${s.pruning}`,
+      `  cache:         ${s.cache}`,
+      `  totalSaved:    ${s.totalSaved}`,
+      `  percentage:    ${s.percentage.toFixed(1)}%`,
+    ];
+    if (result.explain && Object.keys(result.explain).length > 0) {
+      lines.push('Explain:');
+      for (const [key, value] of Object.entries(result.explain)) {
+        lines.push(`  ${key}: ${value}`);
+      }
+    }
+    return lines.join('\n');
   }
 }

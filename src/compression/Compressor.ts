@@ -4,10 +4,12 @@ import { Deduplicator } from './Deduplicator';
 import { SemanticCompressor } from './SemanticCompressor';
 import { SmartTruncator } from './SmartTruncator';
 import { PromptPruner } from './PromptPruner';
+import { CachePin } from '../router/CachePin';
 
 export interface CompressionResult {
   compressed: Message[];
   stats: CompressionStats;
+  explain?: Record<string, string>;
 }
 
 /**
@@ -31,62 +33,78 @@ export class Compressor {
   private semanticCompressor = new SemanticCompressor();
   private smartTruncator = new SmartTruncator();
   private promptPruner = new PromptPruner();
+  private cachePin = new CachePin();
 
   compress(messages: Message[], level: 0 | 1 | 2 | 3, contextWindow: number): CompressionResult {
     if (level === 0) {
-      return { compressed: messages, stats: this.emptyStats() };
+      return { compressed: messages, stats: this.emptyStats(), explain: {} };
     }
 
     if (messages.length === 0) {
-      return { compressed: [], stats: this.emptyStats() };
+      return { compressed: [], stats: this.emptyStats(), explain: {} };
     }
 
     let current = messages;
     const stats: CompressionStats = {
       totalSaved: 0,
       percentage: 0,
-      breakdown: { deduplication: 0, semantic: 0, truncation: 0, toolResult: 0, promptPruner: 0 },
+      deduplication: 0,
+      semantic: 0,
+      truncation: 0,
+      toolResult: 0,
+      pruning: 0,
+      cache: 0,
     };
+    const explain: Record<string, string> = {};
 
     // Level >= 2: ToolResultCompressor runs FIRST (greedy collapse before dedup)
     if (level >= 2) {
       const toolResult = this.toolResultCompressor.compress(current);
       current = toolResult.compressed;
-      stats.breakdown.toolResult = toolResult.stats.toolResult;
+      stats.toolResult = toolResult.stats.toolResult;
       stats.totalSaved += toolResult.stats.toolResult;
+      explain.toolResult = `Collapsed tool output: saved ${toolResult.stats.toolResult} chars`;
     }
 
     // Level == 3: PromptPruner lightweight importance scoring + threshold rerun
     if (level === 3) {
       const pruneResult = this.promptPruner.prune(current);
       current = pruneResult.pruned;
-      stats.breakdown.promptPruner = pruneResult.stats.pruned;
+      stats.pruning = pruneResult.stats.pruned;
       stats.totalSaved += pruneResult.stats.pruned;
+      explain.pruning = `Pruned low-importance lines: saved ${pruneResult.stats.pruned} chars`;
     }
 
     if (level >= 1) {
       const dedupResult = this.deduplicator.compress(current);
       current = dedupResult.deduplicated;
-      stats.breakdown.deduplication = dedupResult.stats.deduplication;
+      stats.deduplication = dedupResult.stats.deduplication;
       stats.totalSaved += dedupResult.stats.deduplication;
 
       const semanticResult = this.semanticCompressor.compress(current);
       current = semanticResult.compressed;
-      stats.breakdown.semantic = semanticResult.stats.semantic;
+      stats.semantic = semanticResult.stats.semantic;
       stats.totalSaved += semanticResult.stats.semantic;
     }
 
     if (level >= 2) {
       const truncationResult = this.smartTruncator.truncate(current, contextWindow);
       current = truncationResult.truncated;
-      stats.breakdown.truncation = truncationResult.stats.truncation;
+      stats.truncation = truncationResult.stats.truncation;
       stats.totalSaved += truncationResult.stats.truncation;
+    }
+
+    // Level == 3: CachePin — advisory pin for KV-cache hit maximization
+    if (level === 3) {
+      this.cachePin.forMessages(current);
+      stats.cache = 0; // CachePin does not reduce tokens; it pins for provider cache
+      explain.cache = `CachePin applied: ${this.cachePin.pin.slice(0, 8)}…`;
     }
 
     const originalTokens = this.countTokens(messages);
     stats.percentage = originalTokens > 0 ? (stats.totalSaved / originalTokens) * 100 : 0;
 
-    return { compressed: current, stats };
+    return { compressed: current, stats, explain };
   }
 
   private countTokens(messages: Message[]): number {
@@ -97,7 +115,12 @@ export class Compressor {
     return {
       totalSaved: 0,
       percentage: 0,
-      breakdown: { deduplication: 0, semantic: 0, truncation: 0, toolResult: 0, promptPruner: 0 },
+      deduplication: 0,
+      semantic: 0,
+      truncation: 0,
+      toolResult: 0,
+      pruning: 0,
+      cache: 0,
     };
   }
 }
