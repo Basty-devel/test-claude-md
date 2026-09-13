@@ -167,6 +167,8 @@ duplicates the content above, which is expected for this manual test.)
 
 OmniFree installs as `@basty/omnifree` (npm registry: `/plugin install @basty/omnifree`) and registers the canonical short skill **`/use`** in Claude Code. `/omnifree` remains a documented alias — `/use` is the only word needed in-session. This is the project-specific guardrail for all “Bash-and-chat in one” interactions.
 
+**Note:** OmniFree is **not on the official Claude marketplace** (routes through free providers, not Anthropic's paid API). Manual installation required — see README.md.
+
 ### 8.1 Purpose
 
 One quoted command line — intent-inferred execution — for both shell work and chat across 8 free-tier providers (chat, code, image), maximizing quota utilization via token compression and intelligent routing. Design spec is [`docs/superpowers/specs/2026-09-12-omnifree-plugin-design.md`](docs/superpowers/specs/2026-09-12-omnifree-plugin-design.md) §5.2–§5.4 + §5.2.1; implementation plan is [`docs/superpowers/plans/2026-09-12-omnifree-plugin.md`](docs/superpowers/plans/2026-09-12-omnifree-plugin.md) Task 15. Do not re-specify or re-design the CLI outside those files — this section is the operational summary for the coding agent.
