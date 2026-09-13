@@ -50,6 +50,9 @@
   "optionalDependencies": {
     "zstd-napi": "^0.0.13"
   },
+  "allowScripts": {
+    "zstd-napi": true
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/Basty-devel/test-claude-md.git"
