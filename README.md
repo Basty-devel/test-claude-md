@@ -15,6 +15,8 @@ OmniFree is a **Claude Code plugin** that routes every request through **8 verif
 
 ## Installation
 
+OmniFree is **not on the official Claude marketplace** (routes through free providers, not Anthropic's paid API). Install manually:
+
 ### npm
 
 ```bash
@@ -25,7 +27,27 @@ npm install -g @basty/omnifree@latest
 ### From source
 
 ```bash
-npm install && npm run dev           # if present in this checkout
+git clone https://github.com/Basty-devel/test-claude-md.git
+cd test-claude-md
+npm install && npm run dev
+```
+
+### Register with Claude Code
+
+After npm install, register the plugin manually:
+
+```bash
+# Option A: Add as local marketplace
+claude plugin marketplace add github.com/Basty-devel/test-claude-md
+
+# Option B: Copy plugin files
+mkdir -p ~/.claude/plugins/@basty/omnifree
+cp -r dist/ skills/ .claude-plugin/ ~/.claude/plugins/@basty/omnifree/
+```
+
+Restart Claude Code, then test:
+```
+/use "hello"
 ```
 
 Config: `~/.claude/plugins/omnifree/config.json` (created on save).
