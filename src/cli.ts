@@ -6,6 +6,7 @@ import { Compressor } from './compression/Compressor';
 import { Config } from './config/Config';
 import { StatusCommand } from './commands/StatusCommand';
 import { StrategyCommand } from './commands/StrategyCommand';
+import { HelpCommand } from './commands/HelpCommand';
 import { ProviderRequest, Message } from './types';
 
 export type Intent = 'bash' | 'chat' | 'slash';
@@ -167,6 +168,7 @@ export class CLI {
   private config: Config;
   private statusCommand: StatusCommand;
   private strategyCommand: StrategyCommand;
+  private helpCommand: HelpCommand;
 
   constructor(
     pool: Pool,
@@ -174,7 +176,8 @@ export class CLI {
     compressor: Compressor,
     config: Config,
     statusCommand: StatusCommand,
-    strategyCommand: StrategyCommand
+    strategyCommand: StrategyCommand,
+    helpCommand?: HelpCommand
   ) {
     this.pool = pool;
     this.router = router;
@@ -182,6 +185,7 @@ export class CLI {
     this.config = config;
     this.statusCommand = statusCommand;
     this.strategyCommand = strategyCommand;
+    this.helpCommand = helpCommand ?? new HelpCommand();
   }
 
   async run(input: string): Promise<string> {
@@ -197,20 +201,27 @@ export class CLI {
   }
 
   private handleSlashCommand(input: string): string {
-    const parts = input.slice(5).trim().split(/\s+/);
+    const cmd = input.slice(5).trim();
+    if (cmd === '') return this.helpCommand.execute();
+    const parts = cmd.split(/\s+/);
     const subcommand = parts[0];
+    if (subcommand === '-h' || subcommand === '--help') return this.helpCommand.execute('slash');
     if (subcommand === 'status') return this.statusCommand.execute();
     if (subcommand === 'strategy') {
       const strategy = parts[1];
+      if (strategy === '-h' || strategy === '--help') return this.helpCommand.execute('slash');
       if (!strategy) return '❌ Usage: /use strategy <priority|round-robin|cost>';
       return this.strategyCommand.execute(strategy);
     }
     if (subcommand === 'compress') {
       const action = parts[1];
+      if (action === '-h' || action === '--help') return this.helpCommand.execute('compress');
       if (action === 'stats') return this.compressStats();
-      return '❌ Usage: /use compress stats';
+      return `❌ Usage: /use compress stats — see /use compress --help`;
     }
-    return `❌ Unknown slash command: /use ${subcommand}. Available: status, strategy, compress`;
+    if (subcommand === 'help' && parts[1] === 'compress') return this.helpCommand.execute('compress');
+    if (subcommand === 'help') return this.helpCommand.execute();
+    return `❌ Unknown slash command: /use ${subcommand}. Available: status, strategy, compress, help · try /use -h`;
   }
 
   private compressStats(): string {

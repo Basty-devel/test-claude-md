@@ -22,6 +22,7 @@ import { OfflineEmergency } from './features/OfflineEmergency';
 import { CostDashboard } from './features/CostDashboard';
 import { ProviderWatchdog } from './features/ProviderWatchdog';
 import { dispatch, Deps, DispatchResult, CLI } from './cli';
+import { HelpCommand } from './commands/HelpCommand';
 
 /**
  * OmniFree — Unified free-tier AI provider routing for Claude Code.
@@ -48,6 +49,7 @@ export class OmniFreePlugin {
   private costDashboard: CostDashboard;
   private watchdog: ProviderWatchdog;
   private cli: CLI;
+  private helpCommand: HelpCommand;
 
   constructor() {
     this.pool = new Pool();
@@ -65,7 +67,8 @@ export class OmniFreePlugin {
     this.offlineEmergency = new OfflineEmergency();
     this.costDashboard = new CostDashboard();
     this.watchdog = new ProviderWatchdog(this.pool);
-    this.cli = new CLI(this.pool, this.router, this.compressor, this.config, this.statusCommand, this.strategyCommand);
+    this.helpCommand = new HelpCommand();
+    this.cli = new CLI(this.pool, this.router, this.compressor, this.config, this.statusCommand, this.strategyCommand, this.helpCommand);
 
     this.initializeProviders(cfg.providers);
     this.watchdog.start();
