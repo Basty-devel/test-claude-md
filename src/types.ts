@@ -49,7 +49,7 @@ export interface ProviderConfig {
 
 export interface PluginConfig {
   strategy: 'priority' | 'round-robin' | 'cost';
-  compression: 0 | 1 | 2;
+  compression: 0 | 1 | 2 | 3;
   providers: Record<string, ProviderConfig>;
   emergency: 'local' | 'skip';
   watchdog: boolean;
@@ -76,5 +76,6 @@ export interface CompressionStats {
     deduplication: number;
     semantic: number;
     truncation: number;
+    toolResult: number;
   };
 }

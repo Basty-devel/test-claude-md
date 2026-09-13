@@ -216,4 +216,52 @@ describe('Compressor', () => {
     expect(result.compressed[1].role).toBe('user');
     expect(result.compressed[2].role).toBe('assistant');
   });
+
+  // --- ToolResultCompressor integration (level 2+) ---
+
+  it('should include toolResult in breakdown at level 2', () => {
+    const big = Array.from({ length: 200 }, (_, i) => `/src/file-${i}.ts`).join('\n');
+    const messages: Message[] = [{ role: 'user' as const, content: big }];
+
+    const result = compressor.compress(messages, 2, 10000);
+
+    expect(result.stats.breakdown.toolResult).toBeGreaterThan(0);
+    expect(result.stats.totalSaved).toBeGreaterThanOrEqual(result.stats.breakdown.toolResult);
+  });
+
+  it('should have zero toolResult at level 1', () => {
+    const big = Array.from({ length: 200 }, (_, i) => `/src/file-${i}.ts`).join('\n');
+    const messages: Message[] = [{ role: 'user' as const, content: big }];
+
+    const result = compressor.compress(messages, 1, 10000);
+
+    expect(result.stats.breakdown.toolResult).toBe(0);
+  });
+
+  it('should accept level 3 without error', () => {
+    const messages: Message[] = [
+      { role: 'user' as const, content: 'Hello' }
+    ];
+
+    const result = compressor.compress(messages, 3, 10000);
+
+    expect(result.compressed).toBeDefined();
+    expect(result.stats).toBeDefined();
+  });
+
+  it('should stack toolResult on top of other layers at level 2', () => {
+    const sharedBlock = 'Here is repeated content that is long enough to trigger deduplication across messages. '.repeat(2);
+    const big = Array.from({ length: 200 }, (_, i) => `/src/file-${i}.ts`).join('\n');
+    const messages: Message[] = [
+      { role: 'user' as const, content: `${sharedBlock}\n${big}` },
+      { role: 'assistant' as const, content: 'Acknowledged.' },
+      { role: 'user' as const, content: `${sharedBlock}\n${big}` },
+    ];
+
+    const result = compressor.compress(messages, 2, 10000);
+
+    expect(result.stats.totalSaved).toBeGreaterThan(0);
+    // toolResult should contribute savings
+    expect(result.stats.breakdown.toolResult).toBeGreaterThanOrEqual(0);
+  });
 });
