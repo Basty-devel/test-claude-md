@@ -133,4 +133,46 @@ describe('Pool', () => {
   it('should handle updateQuota for non-existent provider without error', () => {
     expect(() => pool.updateQuota('nonexistent', 100)).not.toThrow();
   });
+
+  it('should clamp remaining quota to zero when tokensUsed exceeds remaining', () => {
+    pool.updateQuota('groq', 1500);
+    expect(mockChatProvider.quota.remaining).toBe(0);
+    expect(mockChatProvider.quota.available).toBe(false);
+  });
+
+  it('should keep remaining quota clamped at zero on repeated updateQuota calls after exhaustion', () => {
+    pool.updateQuota('groq', 1000);
+    pool.updateQuota('groq', 50);
+    expect(mockChatProvider.quota.remaining).toBe(0);
+    expect(mockChatProvider.quota.available).toBe(false);
+  });
+
+  describe('CachePin advisory tracking', () => {
+    it('should return null for a pin with no recorded provider', () => {
+      expect(pool.preferredFor('unseen-pin')).toBeNull();
+    });
+
+    it('should return the recorded provider name for a known pin', () => {
+      pool.recordPin('pin-a', 'groq');
+      expect(pool.preferredFor('pin-a')).toBe('groq');
+    });
+
+    it('should overwrite the preferred provider when the same pin is recorded again', () => {
+      pool.recordPin('pin-a', 'groq');
+      pool.recordPin('pin-a', 'together');
+      expect(pool.preferredFor('pin-a')).toBe('together');
+    });
+
+    it('should track multiple pins independently', () => {
+      pool.recordPin('pin-a', 'groq');
+      pool.recordPin('pin-b', 'together');
+      expect(pool.preferredFor('pin-a')).toBe('groq');
+      expect(pool.preferredFor('pin-b')).toBe('together');
+    });
+
+    it('should not associate a pin with a provider that was never recorded for it', () => {
+      pool.recordPin('pin-a', 'groq');
+      expect(pool.preferredFor('pin-b')).toBeNull();
+    });
+  });
 });
