@@ -26,6 +26,8 @@ export class HelpCommand {
       '  /use strategy <priority|round-robin|cost>',
       '  /use compress <0|1|2|3>  /use config',
       '  /use provider add|remove|disable <name>',
+      '  /use preset save|load|list|show|delete <name>',
+      '  /use preset freeflow  /use preset minimal',
       '  /use forecast  /use emergency local|skip  /use savings',
       '',
       'More: /use -h · /use --help · docs/superpowers/specs/',
@@ -43,6 +45,13 @@ export class HelpCommand {
       '  /use compress <0|1|2|3>             compression level (2 default)',
       '  /use config                         interactive wizard',
       '  /use provider add|remove|disable …  custom providers',
+      '  /use preset save <name>             save current config as preset',
+      '  /use preset load <name>             apply preset to config',
+      '  /use preset list                    list all presets',
+      '  /use preset show <name>             show preset details',
+      '  /use preset delete <name>           delete user preset',
+      '  /use preset freeflow                built-in: round-robin, level 3, prediction',
+      '  /use preset minimal                 built-in: priority, level 1',
       '  /use forecast  /use emergency …  /use savings',
     ].join('\n');
   }

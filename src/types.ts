@@ -53,6 +53,7 @@ export interface PluginConfig {
   providers: Record<string, ProviderConfig>;
   emergency: 'local' | 'skip';
   watchdog: boolean;
+  prediction?: boolean;
 }
 
 export interface ContextHandoff {

@@ -4,9 +4,11 @@ import { Pool } from './router/Pool';
 import { Router } from './router/Router';
 import { Compressor } from './compression/Compressor';
 import { Config } from './config/Config';
+import { Presets } from './config/Presets';
 import { StatusCommand } from './commands/StatusCommand';
 import { StrategyCommand } from './commands/StrategyCommand';
 import { HelpCommand } from './commands/HelpCommand';
+import { PresetsCommand } from './commands/PresetsCommand';
 import { ProviderRequest, Message } from './types';
 
 export type Intent = 'bash' | 'chat' | 'slash';
@@ -169,6 +171,7 @@ export class CLI {
   private statusCommand: StatusCommand;
   private strategyCommand: StrategyCommand;
   private helpCommand: HelpCommand;
+  private presetsCommand: PresetsCommand;
 
   constructor(
     pool: Pool,
@@ -177,7 +180,8 @@ export class CLI {
     config: Config,
     statusCommand: StatusCommand,
     strategyCommand: StrategyCommand,
-    helpCommand?: HelpCommand
+    helpCommand?: HelpCommand,
+    presetsCommand?: PresetsCommand
   ) {
     this.pool = pool;
     this.router = router;
@@ -186,6 +190,7 @@ export class CLI {
     this.statusCommand = statusCommand;
     this.strategyCommand = strategyCommand;
     this.helpCommand = helpCommand ?? new HelpCommand();
+    this.presetsCommand = presetsCommand ?? new PresetsCommand(new Presets(), config);
   }
 
   async run(input: string): Promise<string> {
@@ -219,9 +224,13 @@ export class CLI {
       if (action === 'stats') return this.compressStats();
       return `❌ Usage: /use compress stats — see /use compress --help`;
     }
+    if (subcommand === 'preset') {
+      const subArgs = parts.slice(1);
+      return this.presetsCommand.handle(subArgs);
+    }
     if (subcommand === 'help' && parts[1] === 'compress') return this.helpCommand.execute('compress');
     if (subcommand === 'help') return this.helpCommand.execute();
-    return `❌ Unknown slash command: /use ${subcommand}. Available: status, strategy, compress, help · try /use -h`;
+    return `❌ Unknown slash command: /use ${subcommand}. Available: status, strategy, compress, preset, help · try /use -h`;
   }
 
   private compressStats(): string {

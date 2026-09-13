@@ -45,6 +45,7 @@ function validateConfig(config: any): config is Partial<PluginConfig> {
   if (config.strategy !== undefined && !['priority', 'round-robin', 'cost'].includes(config.strategy)) return false;
   if (config.compression !== undefined && ![0, 1, 2, 3].includes(config.compression)) return false;
   if (config.providers !== undefined && (typeof config.providers !== 'object' || Array.isArray(config.providers))) return false;
+  if (config.prediction !== undefined && typeof config.prediction !== 'boolean') return false;
   return true;
 }
 
