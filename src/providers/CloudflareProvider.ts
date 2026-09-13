@@ -5,7 +5,7 @@ export class CloudflareProvider extends ConcreteProvider {
   private static readonly BASE_URL = 'https://api.cloudflare.com/client/v4';
   private static readonly DAILY_LIMIT = 10000;
 
-  constructor(apiKey: string, accountId: string) {
+  constructor(apiKey: string, accountId = 'default') {
     super({
       name: 'cloudflare',
       category: 'image',
