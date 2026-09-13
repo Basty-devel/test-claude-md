@@ -37,12 +37,17 @@ npm install && npm run dev
 After npm install, register the plugin manually:
 
 ```bash
-# Option A: Add as local marketplace
-claude plugin marketplace add github.com/Basty-devel/test-claude-md
+# Option A: Add as marketplace (full URL)
+claude plugin marketplace add https://github.com/Basty-devel/test-claude-md.git
 
 # Option B: Copy plugin files
+# Linux/Mac:
 mkdir -p ~/.claude/plugins/@basty/omnifree
 cp -r dist/ skills/ .claude-plugin/ ~/.claude/plugins/@basty/omnifree/
+
+# Windows (PowerShell):
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.claude\plugins\@basty\omnifree"
+Copy-Item -Recurse dist, skills, .claude-plugin "$env:USERPROFILE\.claude\plugins\@basty\omnifree\"
 ```
 
 Restart Claude Code, then test:
