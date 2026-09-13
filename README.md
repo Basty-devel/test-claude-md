@@ -183,25 +183,6 @@ Provider branching is 100% tested for coverage on critical paths.
 
 ---
 
-## Installation
-
-### npm
-
-```bash
-npm install -g @basty/omnifree@latest   # ships the skill list incl. /use
-/omnifree        # alias; canonical is /use
-```
-
-### From source
-
-```bash
-npm install && npm run dev           # if present in this checkout
-```
-
-Config: `~/.claude/plugins/omnifree/config.json` (created on save).
-
----
-
 
 ## Architecture at a glance
 
