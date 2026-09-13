@@ -82,4 +82,29 @@ export class Pool {
       }
     }
   }
+
+  // ---- CachePin advisory tracking ----
+
+  private pinToProvider: Map<string, string> = new Map();
+
+  /**
+   * Record that requests with the given cache pin used a specific provider.
+   * Subsequent requests with the same pin will prefer this provider.
+   *
+   * @param pin - Stable hex hash of the message prefix.
+   * @param providerName - Name of the provider used for this pin.
+   */
+  recordPin(pin: string, providerName: string): void {
+    this.pinToProvider.set(pin, providerName);
+  }
+
+  /**
+   * Look up the last-used provider for a given cache pin.
+   *
+   * @param pin - Stable hex hash of the message prefix.
+   * @returns The provider name if cached, otherwise null.
+   */
+  preferredFor(pin: string): string | null {
+    return this.pinToProvider.get(pin) ?? null;
+  }
 }
