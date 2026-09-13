@@ -144,19 +144,10 @@ Provider branching is 100% tested for coverage on critical paths.
 
 ## Installation
 
-### Claude Code plugin (recommended)
-
-```bash
-/plugin install omnifree            # Claude Code Plugin tab
-# invoke with:
-/use "hello"                        # chat
-/use "find . -name '*.ts' -type f" # bash
-```
-
 ### npm
 
 ```bash
-npm install -g @claude-plugins/omnifree   # ships the skill list incl. /use
+npm install -g @basty/omnifree@latest   # ships the skill list incl. /use
 /omnifree        # alias; canonical is /use
 ```
 
