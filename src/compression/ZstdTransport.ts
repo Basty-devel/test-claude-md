@@ -1,5 +1,7 @@
-import * as zstd from 'zstd-napi';
 import { Message } from '../types';
+
+let zstd: typeof import('zstd-napi') | null = null;
+try { zstd = await import('zstd-napi'); } catch { /* optional — transport disabled */ }
 
 /**
  * ZstdTransport — professional wire-format compression for large payloads.
@@ -38,7 +40,7 @@ export class ZstdTransport {
     const originalText = this.joinMessages(messages);
     const originalBytes = Buffer.byteLength(originalText, 'utf-8');
 
-    if (!enabled || originalBytes < ZstdTransport.MIN_BYTES) {
+    if (!enabled || originalBytes < ZstdTransport.MIN_BYTES || !zstd) {
       return { compressed: [...messages], originalBytes, transportCompressed: false };
     }
 
@@ -60,7 +62,7 @@ export class ZstdTransport {
    * Returns null if not a Zstd envelope.
    */
   decompress(compressedContent: string): string | null {
-    if (!compressedContent.startsWith(ZstdTransport.ENVELOPE_PREFIX)) return null;
+    if (!compressedContent.startsWith(ZstdTransport.ENVELOPE_PREFIX) || !zstd) return null;
     const b64 = compressedContent.slice(ZstdTransport.ENVELOPE_PREFIX.length);
     const compressedBytes = Buffer.from(b64, 'base64');
     const decompressed: Uint8Array = zstd.decompress(compressedBytes);
