@@ -77,5 +77,6 @@ export interface CompressionStats {
     semantic: number;
     truncation: number;
     toolResult: number;
+    promptPruner: number;
   };
 }

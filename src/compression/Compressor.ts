@@ -3,6 +3,7 @@ import { ToolResultCompressor } from './ToolResultCompressor';
 import { Deduplicator } from './Deduplicator';
 import { SemanticCompressor } from './SemanticCompressor';
 import { SmartTruncator } from './SmartTruncator';
+import { PromptPruner } from './PromptPruner';
 
 export interface CompressionResult {
   compressed: Message[];
@@ -29,6 +30,7 @@ export class Compressor {
   private deduplicator = new Deduplicator();
   private semanticCompressor = new SemanticCompressor();
   private smartTruncator = new SmartTruncator();
+  private promptPruner = new PromptPruner();
 
   compress(messages: Message[], level: 0 | 1 | 2 | 3, contextWindow: number): CompressionResult {
     if (level === 0) {
@@ -43,7 +45,7 @@ export class Compressor {
     const stats: CompressionStats = {
       totalSaved: 0,
       percentage: 0,
-      breakdown: { deduplication: 0, semantic: 0, truncation: 0, toolResult: 0 },
+      breakdown: { deduplication: 0, semantic: 0, truncation: 0, toolResult: 0, promptPruner: 0 },
     };
 
     // Level >= 2: ToolResultCompressor runs FIRST (greedy collapse before dedup)
@@ -52,6 +54,14 @@ export class Compressor {
       current = toolResult.compressed;
       stats.breakdown.toolResult = toolResult.stats.toolResult;
       stats.totalSaved += toolResult.stats.toolResult;
+    }
+
+    // Level == 3: PromptPruner lightweight importance scoring + threshold rerun
+    if (level === 3) {
+      const pruneResult = this.promptPruner.prune(current);
+      current = pruneResult.pruned;
+      stats.breakdown.promptPruner = pruneResult.stats.pruned;
+      stats.totalSaved += pruneResult.stats.pruned;
     }
 
     if (level >= 1) {
@@ -87,7 +97,7 @@ export class Compressor {
     return {
       totalSaved: 0,
       percentage: 0,
-      breakdown: { deduplication: 0, semantic: 0, truncation: 0, toolResult: 0 },
+      breakdown: { deduplication: 0, semantic: 0, truncation: 0, toolResult: 0, promptPruner: 0 },
     };
   }
 }

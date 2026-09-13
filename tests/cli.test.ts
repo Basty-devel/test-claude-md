@@ -145,7 +145,7 @@ describe('CLI', () => {
     const compressSpy = vi.spyOn(mockCompressor, 'compress');
     compressSpy.mockReturnValue({
       compressed: [{ role: 'user', content: 'compressed' }],
-      stats: { totalSaved: 0, percentage: 0, breakdown: { deduplication: 0, semantic: 0, truncation: 0 } }
+      stats: { totalSaved: 0, percentage: 0, breakdown: { deduplication: 0, semantic: 0, truncation: 0, toolResult: 0, promptPruner: 0 } }
     } as any);
 
     vi.spyOn(mockStatusCommand, 'execute').mockReturnValue('📊 OmniFree Status\n✅ groq: 8000/14000 (57%)');
